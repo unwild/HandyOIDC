@@ -18,8 +18,8 @@ namespace WebApplication
 
             HandyOIDC.HandyOIDC.Init(new HandyOIDCSettings()
             {
-                AuthorizationURL = "https://myprovider.xyz/authorize",
-                TokenURL = "https://myprovider.xyz/token",
+                AuthorizationEndpointURL = "https://myprovider.xyz/authorize",
+                TokenEndpointURL = "https://myprovider.xyz/token",
                 ClientId = "myclientid",
                 ClientSecret = "myclientsecret",
                 CallbackURL = "http://localhost:63835/callback"

@@ -8,7 +8,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebApplication", "WebApplic
 		{C9DB3075-811D-4769-AF0E-843DD69029FB} = {C9DB3075-811D-4769-AF0E-843DD69029FB}
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HandyOIDC", "HandyOIDC45\HandyOIDC.csproj", "{C9DB3075-811D-4769-AF0E-843DD69029FB}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HandyOIDC", "HandyOIDC\HandyOIDC.csproj", "{C9DB3075-811D-4769-AF0E-843DD69029FB}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

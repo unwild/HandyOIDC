@@ -7,8 +7,8 @@
     <ProjectGuid>{C9DB3075-811D-4769-AF0E-843DD69029FB}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>HandyOIDC45</RootNamespace>
-    <AssemblyName>HandyOIDC45</AssemblyName>
+    <RootNamespace>HandyOIDC</RootNamespace>
+    <AssemblyName>HandyOIDC</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>

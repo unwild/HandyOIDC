@@ -80,12 +80,12 @@ namespace HandyOIDC
 
         private static string BuildAuthorizationRequest(string state)
         {
-            return Settings.AuthorizationURL + ToQueryString(GetAuthorizationRequestContent(state));
+            return Settings.AuthorizationEndpointURL + ToQueryString(GetAuthorizationRequestContent(state));
         }
 
         private static string BuildTokenRequest(string code)
         {
-            return Settings.TokenURL + ToQueryString(GetTokenRequestContent(code));
+            return Settings.TokenEndpointURL + ToQueryString(GetTokenRequestContent(code));
         }
 
         private static IEnumerable<KeyValuePair<string, string>> GetAuthorizationRequestContent(string state)

@@ -2,9 +2,9 @@
 {
     public class HandyOIDCSettings
     {
-        public string AuthorizationURL { get; set; }
+        public string AuthorizationEndpointURL { get; set; }
 
-        public string TokenURL { get; set; }
+        public string TokenEndpointURL { get; set; }
 
         public string ClientId { get; set; }
 
