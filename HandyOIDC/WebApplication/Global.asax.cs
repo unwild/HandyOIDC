@@ -16,13 +16,16 @@ namespace WebApplication
             RouteConfig.RegisterRoutes(RouteTable.Routes);
             BundleConfig.RegisterBundles(BundleTable.Bundles);
 
-            HandyOIDC.HandyOIDC.Init(new HandyOIDCSettings()
+            HandyOidc.Init(new HandyOIDCSettings()
             {
-                AuthorizationEndpointURL = "https://myprovider.xyz/authorize",
-                TokenEndpointURL = "https://myprovider.xyz/token",
-                ClientId = "myclientid",
-                ClientSecret = "myclientsecret",
-                CallbackURL = "http://localhost:63835/callback"
+                AuthorizationEndpointURL = "https://dev-oh98gwym.eu.auth0.com/authorize",
+                TokenEndpointURL = "https://dev-oh98gwym.eu.auth0.com/oauth/token",
+                ClientId = "kki6oRVaHMI1YByFVPmPqg6Qr3NskT8o",
+                ClientSecret = "kiqAajoebizqoTRGwt8Mmkvgcjs9Wkj8sp959pz9ja9M0dJ3XO7ldegnLvH_RoUk",
+                //CallbackURL = "http://localhost:63835/callback",
+                //AuthFailURL = "http://localhost:63835/Home/Fail"
+                CallbackURL = "http://localhost:63835/callback",
+                AuthFailURL = "http://localhost:63835/Home/Fail"
             });
 
         }
@@ -31,7 +34,7 @@ namespace WebApplication
         protected void Application_AcquireRequestState(Object sender, EventArgs e)
         {
 
-            HandyOIDC.HandyOIDC.HandleLogin(HttpContext.Current);
+            HandyOidc.HandleLogin(HttpContext.Current);
 
         }
 

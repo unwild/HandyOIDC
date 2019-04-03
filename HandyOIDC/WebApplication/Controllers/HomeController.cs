@@ -23,9 +23,14 @@ namespace WebApplication.Controllers
             return View();
         }
 
-        public ActionResult callback()
+        public ActionResult Callback()
         {
             return View();
+        }
+
+        public ActionResult Fail()
+        {
+            return Content("Auth failed");
         }
     }
 }

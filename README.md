@@ -1,5 +1,5 @@
 # HandyOIDC
-[WIP] [DEV] Minimalist OIDC Code flow implementation for tiny .net framework 4.5 applications
+[WIP] [DEV] Minimalist OIDC Code flow implementation for tiny .net framework 4.5.2 applications
 
 ### DO NOT USE
 

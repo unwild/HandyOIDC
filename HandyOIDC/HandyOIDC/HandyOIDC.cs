@@ -8,7 +8,7 @@ using System.Web;
 namespace HandyOIDC
 {
 
-    public static class HandyOIDC
+    public static class HandyOidc
     {
 
         private static HandyOIDCSettings Settings;
@@ -22,50 +22,41 @@ namespace HandyOIDC
 
         public static void HandleLogin(HttpContext context)
         {
+            //If user auth failed
+            if (Settings.AuthFailURL != null && context.Request.Url.ToString().Contains(Settings.AuthFailURL))
+                return;
 
-            if (context.Request.Url.ToString().Contains(Settings.CallbackURL))
+
+            if (context.Request.Url.ToString().Contains(Settings.CallbackURL)
+                && context.Request.QueryString["code"] != null && context.Request.QueryString["state"] != null //Request must have a code and state
+                && context.Session["OIDC_State"] != null && context.Session["OIDC_State"].ToString() == context.Request.QueryString["state"])//State must match send state
             {
+                string code = context.Request.QueryString["code"].ToString();
 
-                if (context.Request.QueryString["code"] != null && context.Request.QueryString["state"] != null //Request must have a code and state
-                    && context.Session["OIDC_State"] != null && context.Session["OIDC_State"].ToString() == context.Request.QueryString["state"])//State must match send state
+                HttpResponseMessage response = TryGetToken(code, context);
+
+                if (response.IsSuccessStatusCode)
                 {
-                    string code = context.Request.QueryString["code"].ToString();
-
-                    context.ApplicationInstance.Response.Clear();
-                    context.ApplicationInstance.Response.Headers.Add("Content-Type", "application/x-www-form-urlencoded");
-                    context.ApplicationInstance.Response.Headers.Add("Authorization", GetAuthorizationHeader());
-
-                    HttpContent content = new FormUrlEncodedContent(new List<KeyValuePair<string, string>>() /*GetTokenRequestContent(code)*/);
-                    content.Headers.Clear();
-                    //content.Headers.Add("Content-Type", "application/x-www-form-urlencoded");
-
-                    HttpResponseMessage response = client.PostAsync(BuildTokenRequest(code) /*Settings.TokenURL*/, content).Result;
-
-                    if (response.IsSuccessStatusCode)
+                    throw new NotImplementedException();
+                }
+                else
+                {
+                    if (Settings.AuthFailURL != null)
                     {
-
-
+                        context.ApplicationInstance.Response.Redirect(Settings.AuthFailURL);
                     }
                     else
                     {
-                        if (Settings.AuthFailURL != null)
-                        {
-                            context.ApplicationInstance.Response.Redirect(Settings.AuthFailURL);
-                        }
-                        else
-                        {
-                            context.ApplicationInstance.Response.Clear();
-                            context.ApplicationInstance.Response.Write("Access Denied");
-                            context.ApplicationInstance.Response.StatusCode = 401;
-                            context.ApplicationInstance.Response.End();
-                            return;
-                        }
-
+                        context.ApplicationInstance.Response.Clear();
+                        context.ApplicationInstance.Response.Write("Access Denied");
+                        context.ApplicationInstance.Response.StatusCode = 401;
+                        context.ApplicationInstance.Response.End();
+                        return;
                     }
 
-                    return;
-
                 }
+
+                return;
 
             }
 
@@ -78,6 +69,20 @@ namespace HandyOIDC
 
 
 
+        private static HttpResponseMessage TryGetToken(string code, HttpContext context)
+        {
+            context.ApplicationInstance.Response.Clear();
+
+            context.ApplicationInstance.Response.Headers.Add("Authorization", GetAuthorizationHeader());
+
+            HttpContent content = new FormUrlEncodedContent(GetTokenRequestContent(code));
+            content.Headers.Clear();
+            content.Headers.Add("Content-Type", "application/x-www-form-urlencoded");
+
+            return client.PostAsync(Settings.TokenEndpointURL, content).Result;
+
+        }
+
         private static string BuildAuthorizationRequest(string state)
         {
             return Settings.AuthorizationEndpointURL + ToQueryString(GetAuthorizationRequestContent(state));
@@ -87,6 +92,7 @@ namespace HandyOIDC
         {
             return Settings.TokenEndpointURL + ToQueryString(GetTokenRequestContent(code));
         }
+
 
         private static IEnumerable<KeyValuePair<string, string>> GetAuthorizationRequestContent(string state)
         {
@@ -105,9 +111,10 @@ namespace HandyOIDC
             {
                 new KeyValuePair<string, string>("grant_type", "authorization_code"),
                 new KeyValuePair<string, string>("code", code),
-                new KeyValuePair<string, string>("redirect_uri", Settings.CallbackURL)
+                new KeyValuePair<string, string>("redirect_uri", Settings.CallbackURL),
             };
         }
+
 
         private static string ToQueryString(IEnumerable<KeyValuePair<string, string>> values)
         {
