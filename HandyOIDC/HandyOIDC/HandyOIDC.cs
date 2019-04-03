@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Security.Cryptography;
+using System.Security.Principal;
 using System.Web;
 
 namespace HandyOIDC
@@ -37,7 +38,11 @@ namespace HandyOIDC
 
                 if (response.IsSuccessStatusCode)
                 {
-                    throw new NotImplementedException();
+                    string token = response.Content.ReadAsStringAsync().Result;
+
+                    GenericIdentity webIdentity = new GenericIdentity("test", "OIDC");
+                    GenericPrincipal principal = new GenericPrincipal(webIdentity, new[] { "Role1", "Role2" });
+                    HttpContext.Current.User = principal;
                 }
                 else
                 {
@@ -73,13 +78,14 @@ namespace HandyOIDC
         {
             context.ApplicationInstance.Response.Clear();
 
-            context.ApplicationInstance.Response.Headers.Add("Authorization", GetAuthorizationHeader());
+            if (Settings.TokenEndPointAuthicationMethod == TokenEndPointAuthicationMethod.Basic)
+                context.ApplicationInstance.Response.Headers.Add("Authorization", GetAuthorizationHeader());
 
             HttpContent content = new FormUrlEncodedContent(GetTokenRequestContent(code));
             content.Headers.Clear();
             content.Headers.Add("Content-Type", "application/x-www-form-urlencoded");
 
-            return client.PostAsync(Settings.TokenEndpointURL, content).Result;
+            return client.PostAsync(BuildTokenRequest(code), content).Result;
 
         }
 
@@ -107,12 +113,20 @@ namespace HandyOIDC
 
         private static IEnumerable<KeyValuePair<string, string>> GetTokenRequestContent(string code)
         {
-            return new List<KeyValuePair<string, string>>
+            var content = new List<KeyValuePair<string, string>>
             {
                 new KeyValuePair<string, string>("grant_type", "authorization_code"),
                 new KeyValuePair<string, string>("code", code),
                 new KeyValuePair<string, string>("redirect_uri", Settings.CallbackURL),
             };
+
+            if (Settings.TokenEndPointAuthicationMethod == TokenEndPointAuthicationMethod.Post)
+            {
+                content.Add(new KeyValuePair<string, string>("client_id", Settings.ClientId));
+                content.Add(new KeyValuePair<string, string>("client_secret", Settings.ClientSecret));
+            }
+
+            return content;
         }
 
 

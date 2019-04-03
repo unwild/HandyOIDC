@@ -23,7 +23,8 @@ namespace WebApplication
                 ClientId = "kki6oRVaHMI1YByFVPmPqg6Qr3NskT8o",
                 ClientSecret = "kiqAajoebizqoTRGwt8Mmkvgcjs9Wkj8sp959pz9ja9M0dJ3XO7ldegnLvH_RoUk",
                 CallbackURL = "http://localhost:63835/callback",
-                AuthFailURL = "http://localhost:63835/Home/Fail"
+                AuthFailURL = "http://localhost:63835/Home/Fail",
+                TokenEndPointAuthicationMethod = TokenEndPointAuthicationMethod.Post
             });
 
         }
