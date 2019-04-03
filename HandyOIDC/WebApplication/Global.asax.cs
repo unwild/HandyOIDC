@@ -22,8 +22,6 @@ namespace WebApplication
                 TokenEndpointURL = "https://dev-oh98gwym.eu.auth0.com/oauth/token",
                 ClientId = "kki6oRVaHMI1YByFVPmPqg6Qr3NskT8o",
                 ClientSecret = "kiqAajoebizqoTRGwt8Mmkvgcjs9Wkj8sp959pz9ja9M0dJ3XO7ldegnLvH_RoUk",
-                //CallbackURL = "http://localhost:63835/callback",
-                //AuthFailURL = "http://localhost:63835/Home/Fail"
                 CallbackURL = "http://localhost:63835/callback",
                 AuthFailURL = "http://localhost:63835/Home/Fail"
             });
