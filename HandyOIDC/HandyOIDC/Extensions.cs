@@ -13,6 +13,7 @@ namespace HandyOIDC
                 ValidIssuer = parms.ValidIssuer,
                 ValidAudiences = parms.ValidAudiences,
                 IssuerSigningKeys = HandyOidc.GetSigningKeys(),
+                AuthenticationType = "id_token"
             };
 
         }

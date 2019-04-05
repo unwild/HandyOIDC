@@ -13,6 +13,9 @@ namespace HandyOIDC
 
     public static class HandyOidc
     {
+        readonly static string STATE_SESSION_KEY = "HandyOidc_User_State";
+        readonly static string JWT_SESSION_KEY = "HandyOidc_User_Jwt";
+        readonly static string FINALCALLBACK_SESSION_KEY = "HandyOidc_User_FinalCallback";
 
         private static HandyOidcSettings Settings;
         private static readonly HttpClient client = new HttpClient();
@@ -25,17 +28,20 @@ namespace HandyOIDC
 
         public static void HandleLogin(HttpContext context)
         {
+            //If there is a token in session, we try to validate it
+            TryUserTokenAuthentication(context);
 
-            //TODO check si besoin de reload le token
+            if (context.User.Identity.IsAuthenticated)
+                return;
 
             //If user auth failed
             if (Settings.ClientAuthenticationParameters.AuthFailUrl != null && context.Request.Url.ToString().Contains(Settings.ClientAuthenticationParameters.AuthFailUrl))
                 return;
 
-
+            //If request is callback from Oidc provider login page
             if (context.Request.Url.ToString().Contains(Settings.ClientAuthenticationParameters.CallbackUrl)
                 && context.Request.QueryString["code"] != null && context.Request.QueryString["state"] != null //Request must have a code and state
-                && context.Session["OIDC_State"] != null && context.Session["OIDC_State"].ToString() == context.Request.QueryString["state"])//State must match send state
+                && context.Session[STATE_SESSION_KEY] != null && context.Session[STATE_SESSION_KEY].ToString() == context.Request.QueryString["state"])//State must match send state
             {
                 string code = context.Request.QueryString["code"].ToString();
 
@@ -50,15 +56,14 @@ namespace HandyOIDC
 
                     var handler = new JwtSecurityTokenHandler();
 
-                    var principal = handler.ValidateToken(
-                        responseModel.id_token,
-                        Settings.ProviderConfiguration.TokenValidationParameters.ToTokenValidationParameters(),
-                        out SecurityToken securityToken);
-
+                    var securityToken = handler.ReadJwtToken(responseModel.id_token);
 
                     //Store securityToken in session
+                    context.Session[JWT_SESSION_KEY] = securityToken;
 
-                    HttpContext.Current.User = principal;
+                    //redirect to original destination
+                    context.ApplicationInstance.Response.Redirect(context.Session[FINALCALLBACK_SESSION_KEY].ToString());
+                    return;
                 }
                 else
                 {
@@ -81,8 +86,12 @@ namespace HandyOIDC
 
             }
 
+
+            //If user isn't authentified
             var state = GetState();
-            context.Session["OIDC_State"] = state;
+
+            context.Session[STATE_SESSION_KEY] = state;
+            context.Session[FINALCALLBACK_SESSION_KEY] = context.Request.Url;
 
             //We redirect to OIDC
             context.ApplicationInstance.Response.Redirect(BuildAuthorizationRequest(state));
@@ -189,6 +198,19 @@ namespace HandyOIDC
             }
         }
 
+        private static void TryUserTokenAuthentication(HttpContext context)
+        {
+            JwtSecurityToken token = context.Session[JWT_SESSION_KEY] != null ? context.Session[JWT_SESSION_KEY] as JwtSecurityToken : null;
+
+            if (token == null)
+                return;
+
+            var handler = new JwtSecurityTokenHandler();
+
+            var principal = handler.ValidateToken(token.RawData, Settings.ProviderConfiguration.TokenValidationParameters.ToTokenValidationParameters(), out SecurityToken securityToken);
+
+            context.User = principal;
+        }
     }
 
 }

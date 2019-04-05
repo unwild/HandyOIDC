@@ -9,7 +9,7 @@ Code is under heavy development and is used for personal project.
 
 TODO : 
  - ~~get user principal from JWT~~
- - store JWT in session
+ - ~~store JWT in session~~
  - Auto config with OpenID Configuration file and JSON Web Key Set URLs
  - ~~Split configuration between ClientAuthenticationParameters / OidcProviderConfiguration~~
 
