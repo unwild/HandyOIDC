@@ -1,12 +1,11 @@
 ﻿using Microsoft.IdentityModel.Tokens;
-using Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Net.Http;
 using System.Security.Cryptography;
-using System.Security.Principal;
 using System.Web;
 
 namespace HandyOIDC
@@ -26,41 +25,46 @@ namespace HandyOIDC
 
         public static void HandleLogin(HttpContext context)
         {
+
+            //TODO check si besoin de reload le token
+
             //If user auth failed
-            if (Settings.AuthFailURL != null && context.Request.Url.ToString().Contains(Settings.AuthFailURL))
+            if (Settings.ClientAuthenticationParameters.AuthFailUrl != null && context.Request.Url.ToString().Contains(Settings.ClientAuthenticationParameters.AuthFailUrl))
                 return;
 
 
-            if (context.Request.Url.ToString().Contains(Settings.CallbackURL)
+            if (context.Request.Url.ToString().Contains(Settings.ClientAuthenticationParameters.CallbackUrl)
                 && context.Request.QueryString["code"] != null && context.Request.QueryString["state"] != null //Request must have a code and state
                 && context.Session["OIDC_State"] != null && context.Session["OIDC_State"].ToString() == context.Request.QueryString["state"])//State must match send state
             {
                 string code = context.Request.QueryString["code"].ToString();
 
+                //Requesting token
                 HttpResponseMessage response = TryGetToken(code, context);
-
 
                 if (response.IsSuccessStatusCode)
                 {
-                    string jsonContent = response.Content.ReadAsStringAsync().Result;
+                    string jsonString = response.Content.ReadAsStringAsync().Result;
 
-                    //dynamic data = JObject.Parse(jsonContent);
+                    TokenEndPointResponseModel responseModel = JsonConvert.DeserializeObject<TokenEndPointResponseModel>(jsonString);
 
-                    //var rawToken = data.ChildrenTokens;
+                    var handler = new JwtSecurityTokenHandler();
 
-                    //var handler = new JwtSecurityTokenHandler();
+                    var principal = handler.ValidateToken(
+                        responseModel.id_token,
+                        Settings.ProviderConfiguration.TokenValidationParameters.ToTokenValidationParameters(),
+                        out SecurityToken securityToken);
 
-                    //JwtSecurityToken token = handler.ReadJwtToken(jsonContent);
 
-                    //var principal = handler.ValidateToken(jsonContent, Settings.TokenValidationParameters, out SecurityToken securityToken);
+                    //Store securityToken in session
 
-                    //HttpContext.Current.User = principal;
+                    HttpContext.Current.User = principal;
                 }
                 else
                 {
-                    if (Settings.AuthFailURL != null)
+                    if (Settings.ClientAuthenticationParameters.AuthFailUrl != null)
                     {
-                        context.ApplicationInstance.Response.Redirect(Settings.AuthFailURL);
+                        context.ApplicationInstance.Response.Redirect(Settings.ClientAuthenticationParameters.AuthFailUrl);
                     }
                     else
                     {
@@ -84,13 +88,33 @@ namespace HandyOIDC
             context.ApplicationInstance.Response.Redirect(BuildAuthorizationRequest(state));
         }
 
+        public static IList<SecurityKey> GetSigningKeys()
+        {
+            IList<SecurityKey> keys = new List<SecurityKey>();
+
+            //TODO if null or empty, use the JkwsUrl to get JwksJson
+            if (!string.IsNullOrEmpty(Settings.ProviderConfiguration.TokenValidationParameters.JwksJson))
+            {
+
+                JsonWebKeySet keyset = JsonConvert.DeserializeObject<JsonWebKeySet>(Settings.ProviderConfiguration.TokenValidationParameters.JwksJson);
+
+                foreach (SecurityKey key in keyset.GetSigningKeys())
+                {
+                    keys.Add(key);
+                }
+            }
+
+            return keys;
+        }
+
+
 
 
         private static HttpResponseMessage TryGetToken(string code, HttpContext context)
         {
             context.ApplicationInstance.Response.Clear();
 
-            if (Settings.TokenEndPointAuthicationMethod == TokenEndPointAuthicationMethod.Basic)
+            if (Settings.ProviderConfiguration.TokenEndPointAuthicationMethod == TokenEndPointAuthicationMethod.Basic)
                 context.ApplicationInstance.Response.Headers.Add("Authorization", GetAuthorizationHeader());
 
             HttpContent content = new FormUrlEncodedContent(GetTokenRequestContent(code));
@@ -103,12 +127,12 @@ namespace HandyOIDC
 
         private static string BuildAuthorizationRequest(string state)
         {
-            return Settings.AuthorizationEndpointURL + ToQueryString(GetAuthorizationRequestContent(state));
+            return Settings.ProviderConfiguration.AuthorizationEndpointUrl + ToQueryString(GetAuthorizationRequestContent(state));
         }
 
         private static string BuildTokenRequest(string code)
         {
-            return Settings.TokenEndpointURL + ToQueryString(GetTokenRequestContent(code));
+            return Settings.ProviderConfiguration.TokenEndpointUrl + ToQueryString(GetTokenRequestContent(code));
         }
 
 
@@ -116,8 +140,8 @@ namespace HandyOIDC
         {
             return new List<KeyValuePair<string, string>>
             {
-                new KeyValuePair<string, string>("client_id", Settings.ClientId),
-                new KeyValuePair<string, string>("redirect_uri", Settings.CallbackURL),
+                new KeyValuePair<string, string>("client_id", Settings.ProviderConfiguration.ClientId),
+                new KeyValuePair<string, string>("redirect_uri", Settings.ClientAuthenticationParameters.CallbackUrl),
                 new KeyValuePair<string, string>("response_type", "code"),
                 new KeyValuePair<string, string>("state", state)
             };
@@ -129,13 +153,13 @@ namespace HandyOIDC
             {
                 new KeyValuePair<string, string>("grant_type", "authorization_code"),
                 new KeyValuePair<string, string>("code", code),
-                new KeyValuePair<string, string>("redirect_uri", Settings.CallbackURL),
+                new KeyValuePair<string, string>("redirect_uri", Settings.ClientAuthenticationParameters.CallbackUrl),
             };
 
-            if (Settings.TokenEndPointAuthicationMethod == TokenEndPointAuthicationMethod.Post)
+            if (Settings.ProviderConfiguration.TokenEndPointAuthicationMethod == TokenEndPointAuthicationMethod.Post)
             {
-                content.Add(new KeyValuePair<string, string>("client_id", Settings.ClientId));
-                content.Add(new KeyValuePair<string, string>("client_secret", Settings.ClientSecret));
+                content.Add(new KeyValuePair<string, string>("client_id", Settings.ProviderConfiguration.ClientId));
+                content.Add(new KeyValuePair<string, string>("client_secret", Settings.ProviderConfiguration.ClientSecret));
             }
 
             return content;
@@ -151,7 +175,7 @@ namespace HandyOIDC
 
         private static string GetAuthorizationHeader()
         {
-            return "Basic " + Convert.ToBase64String(System.Text.Encoding.GetEncoding("ISO-8859-1").GetBytes(Settings.ClientId + ":" + Settings.ClientSecret));
+            return "Basic " + Convert.ToBase64String(System.Text.Encoding.GetEncoding("ISO-8859-1").GetBytes(Settings.ProviderConfiguration.ClientId + ":" + Settings.ProviderConfiguration.ClientSecret));
         }
 
         private static string GetState()
@@ -164,12 +188,6 @@ namespace HandyOIDC
                 return Convert.ToBase64String(tokenData);
             }
         }
-    }
-
-    class TokenEndPointResponseModel
-    {
-
-        //TODO Map json response to this
 
     }
 
