@@ -1,4 +1,6 @@
-﻿namespace HandyOIDC
+﻿using Microsoft.IdentityModel.Tokens;
+
+namespace HandyOIDC
 {
     public enum TokenEndPointAuthicationMethod
     {
@@ -6,7 +8,7 @@
         Basic
     }
 
-    public class HandyOIDCSettings
+    public class HandyOidcSettings
     {
         public string AuthorizationEndpointURL { get; set; }
 
@@ -23,5 +25,9 @@
         public string AuthFailURL { get; set; } = null;
 
         public TokenEndPointAuthicationMethod TokenEndPointAuthicationMethod { get; set; } = TokenEndPointAuthicationMethod.Basic;
+
+        public TokenValidationParameters TokenValidationParameters { get; set; }
+
     }
+
 }

@@ -1,13 +1,14 @@
-﻿using System;
+﻿using HandyOIDC;
+using Microsoft.IdentityModel.Tokens;
+using System;
 using System.Web;
 using System.Web.Mvc;
 using System.Web.Optimization;
 using System.Web.Routing;
-using HandyOIDC;
 
 namespace WebApplication
 {
-    public class MvcApplication : System.Web.HttpApplication
+    public class MvcApplication : HttpApplication
     {
         protected void Application_Start()
         {
@@ -16,7 +17,8 @@ namespace WebApplication
             RouteConfig.RegisterRoutes(RouteTable.Routes);
             BundleConfig.RegisterBundles(BundleTable.Bundles);
 
-            HandyOidc.Init(new HandyOIDCSettings()
+
+            HandyOidc.Init(new HandyOidcSettings()
             {
                 AuthorizationEndpointURL = "https://dev-oh98gwym.eu.auth0.com/authorize",
                 TokenEndpointURL = "https://dev-oh98gwym.eu.auth0.com/oauth/token",
@@ -24,7 +26,11 @@ namespace WebApplication
                 ClientSecret = "kiqAajoebizqoTRGwt8Mmkvgcjs9Wkj8sp959pz9ja9M0dJ3XO7ldegnLvH_RoUk",
                 CallbackURL = "http://localhost:63835/callback",
                 AuthFailURL = "http://localhost:63835/Home/Fail",
-                TokenEndPointAuthicationMethod = TokenEndPointAuthicationMethod.Post
+                TokenEndPointAuthicationMethod = TokenEndPointAuthicationMethod.Post,
+                TokenValidationParameters = new TokenValidationParameters()
+                {
+
+                }
             });
 
         }

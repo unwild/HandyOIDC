@@ -1,5 +1,8 @@
-﻿using System;
+﻿using Microsoft.IdentityModel.Tokens;
+using Newtonsoft.Json.Linq;
+using System;
 using System.Collections.Generic;
+using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Net.Http;
 using System.Security.Cryptography;
@@ -12,11 +15,11 @@ namespace HandyOIDC
     public static class HandyOidc
     {
 
-        private static HandyOIDCSettings Settings;
+        private static HandyOidcSettings Settings;
         private static readonly HttpClient client = new HttpClient();
 
 
-        public static void Init(HandyOIDCSettings settings)
+        public static void Init(HandyOidcSettings settings)
         {
             Settings = settings;
         }
@@ -36,13 +39,22 @@ namespace HandyOIDC
 
                 HttpResponseMessage response = TryGetToken(code, context);
 
+
                 if (response.IsSuccessStatusCode)
                 {
-                    string token = response.Content.ReadAsStringAsync().Result;
+                    string jsonContent = response.Content.ReadAsStringAsync().Result;
 
-                    GenericIdentity webIdentity = new GenericIdentity("test", "OIDC");
-                    GenericPrincipal principal = new GenericPrincipal(webIdentity, new[] { "Role1", "Role2" });
-                    HttpContext.Current.User = principal;
+                    //dynamic data = JObject.Parse(jsonContent);
+
+                    //var rawToken = data.ChildrenTokens;
+
+                    //var handler = new JwtSecurityTokenHandler();
+
+                    //JwtSecurityToken token = handler.ReadJwtToken(jsonContent);
+
+                    //var principal = handler.ValidateToken(jsonContent, Settings.TokenValidationParameters, out SecurityToken securityToken);
+
+                    //HttpContext.Current.User = principal;
                 }
                 else
                 {
@@ -153,4 +165,12 @@ namespace HandyOIDC
             }
         }
     }
+
+    class TokenEndPointResponseModel
+    {
+
+        //TODO Map json response to this
+
+    }
+
 }
