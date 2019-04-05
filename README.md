@@ -11,6 +11,6 @@ TODO :
  - get user principal from JWT
  - store JWT in session
  - Auto config with OpenID Configuration file and JSON Web Key Set URLs
-
+ - Split configuration between ClientAuthenticationParameters / OidcProviderConfiguration
 
 
