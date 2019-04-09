@@ -152,6 +152,7 @@ namespace HandyOIDC
                 new KeyValuePair<string, string>("client_id", Settings.ProviderConfiguration.ClientId),
                 new KeyValuePair<string, string>("redirect_uri", Settings.ClientAuthenticationParameters.CallbackUrl),
                 new KeyValuePair<string, string>("response_type", "code"),
+                new KeyValuePair<string, string>("scope", GetScopeString()),
                 new KeyValuePair<string, string>("state", state)
             };
         }
@@ -210,6 +211,17 @@ namespace HandyOIDC
             var principal = handler.ValidateToken(token.RawData, Settings.ProviderConfiguration.TokenValidationParameters.ToTokenValidationParameters(), out SecurityToken securityToken);
 
             context.User = principal;
+        }
+
+        private static string GetScopeString()
+        {
+            string scope = string.Empty;
+
+            if (!Settings.ProviderConfiguration.Scope.Contains("openid", StringComparer.OrdinalIgnoreCase))
+                scope = "openid ";
+
+            return scope + string.Join(" ", Settings.ProviderConfiguration.Scope);
+
         }
     }
 

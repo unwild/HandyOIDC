@@ -34,7 +34,7 @@ namespace HandyOIDC
 
         public string ClientSecret { get; set; }
 
-        public string Scope { get; set; } = "openid";
+        public string[] Scope { get; set; } = new string[0];
 
         public TokenEndPointAuthicationMethod TokenEndPointAuthicationMethod { get; set; } = TokenEndPointAuthicationMethod.Basic;
 
