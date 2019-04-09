@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Web;
@@ -97,26 +98,32 @@ namespace HandyOIDC
             context.ApplicationInstance.Response.Redirect(BuildAuthorizationRequest(state));
         }
 
-        public static IList<SecurityKey> GetSigningKeys()
+        public static IList<SecurityKey> GetSigningKeysFromUrl(string url)
+        {
+            using (var cli = new WebClient())
+            {
+                var json_data = string.Empty;
+
+                json_data = cli.DownloadString(url);
+
+                return GetSigningKeysFromJson(json_data);
+            }
+        }
+
+        public static IList<SecurityKey> GetSigningKeysFromJson(string jsonString)
         {
             IList<SecurityKey> keys = new List<SecurityKey>();
 
-            //TODO if null or empty, use the JkwsUrl to get JwksJson
-            if (!string.IsNullOrEmpty(Settings.ProviderConfiguration.TokenValidationParameters.JwksJson))
+            JsonWebKeySet keyset = JsonConvert.DeserializeObject<JsonWebKeySet>(jsonString);
+
+            foreach (SecurityKey key in keyset.GetSigningKeys())
             {
-
-                JsonWebKeySet keyset = JsonConvert.DeserializeObject<JsonWebKeySet>(Settings.ProviderConfiguration.TokenValidationParameters.JwksJson);
-
-                foreach (SecurityKey key in keyset.GetSigningKeys())
-                {
-                    keys.Add(key);
-                }
+                keys.Add(key);
             }
+
 
             return keys;
         }
-
-
 
 
         private static HttpResponseMessage TryGetToken(string code, HttpContext context)
@@ -223,6 +230,8 @@ namespace HandyOIDC
             return scope + string.Join(" ", Settings.ProviderConfiguration.Scope);
 
         }
+
+
     }
 
 }

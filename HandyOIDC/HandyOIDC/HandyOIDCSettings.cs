@@ -1,4 +1,5 @@
 ﻿using Microsoft.IdentityModel.Tokens;
+using System.Collections.Generic;
 
 namespace HandyOIDC
 {
@@ -28,8 +29,6 @@ namespace HandyOIDC
 
         public string TokenEndpointUrl { get; set; }
 
-        public string JwksUrl { get; set; }
-
         public string ClientId { get; set; }
 
         public string ClientSecret { get; set; }
@@ -48,7 +47,8 @@ namespace HandyOIDC
 
         public string[] ValidAudiences { get; set; }
 
-        public string JwksJson { get; set; }
+        public IList<SecurityKey> IssuerSigningKeys { get; set; }
+
     }
 
 }
