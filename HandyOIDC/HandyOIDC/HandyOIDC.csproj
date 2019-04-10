@@ -61,6 +61,7 @@
     <Compile Include="Extensions.cs" />
     <Compile Include="HandyOIDC.cs" />
     <Compile Include="HandyOIDCSettings.cs" />
+    <Compile Include="Models\OpenIdConfigurationModel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Models\TokenEndPointResponseModel.cs" />
   </ItemGroup>
