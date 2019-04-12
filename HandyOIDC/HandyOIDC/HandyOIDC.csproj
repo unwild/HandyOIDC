@@ -70,4 +70,7 @@
   </ItemGroup>
   <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>copy /y $(TargetPath) $(SolutionDir)HandyOIDC_$(ConfigurationName).dll</PostBuildEvent>
+  </PropertyGroup>
 </Project>
