@@ -38,14 +38,13 @@ namespace HandyOIDC
             //If there is a token in session, we try to validate it
             TryUserTokenAuthentication(context);
 
-
             //if user is directed to login page
-            if (!string.IsNullOrEmpty(Settings.ClientAuthenticationParameters.LoginUrl) && context.Request.Url.ToString().Contains(Settings.ClientAuthenticationParameters.LoginUrl))
+            if (IsLoginPageRequest(context))
                 return; //continue
 
 
             //if user is logging out
-            if (!string.IsNullOrEmpty(Settings.ClientAuthenticationParameters.LogoutUrl) && context.Request.Url.ToString().Contains(Settings.ClientAuthenticationParameters.LogoutUrl))
+            if (IsLogoutPageRequest(context))
             {
                 Logout(context);
                 return;
@@ -58,7 +57,7 @@ namespace HandyOIDC
 
 
             //If user auth failed
-            if (Settings.ClientAuthenticationParameters.AuthFailUrl != null && context.Request.Url.ToString().Contains(Settings.ClientAuthenticationParameters.AuthFailUrl))
+            if (IsAuthFailPageRequest(context))
                 return;
 
 
@@ -332,6 +331,32 @@ namespace HandyOIDC
             return scope + string.Join(" ", Settings.ProviderConfiguration.Scope);
 
         }
+
+        private static string GetCleanRoute(HttpContext context)
+        {
+            Uri url = context.Request.Url;
+            return string.Format("{0}{1}{2}{3}", url.Scheme, Uri.SchemeDelimiter, url.Authority, url.AbsolutePath);
+        }
+
+
+        private static bool IsLoginPageRequest(HttpContext context)
+        {
+            return !string.IsNullOrEmpty(Settings.ClientAuthenticationParameters.LoginUrl)
+                && string.Equals(GetCleanRoute(context), Settings.ClientAuthenticationParameters.LoginUrl, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsLogoutPageRequest(HttpContext context)
+        {
+            return !string.IsNullOrEmpty(Settings.ClientAuthenticationParameters.LogoutUrl)
+                && string.Equals(GetCleanRoute(context), Settings.ClientAuthenticationParameters.LogoutUrl, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsAuthFailPageRequest(HttpContext context)
+        {
+            return !string.IsNullOrEmpty(Settings.ClientAuthenticationParameters.AuthFailUrl)
+                && string.Equals(GetCleanRoute(context), Settings.ClientAuthenticationParameters.AuthFailUrl, StringComparison.OrdinalIgnoreCase);
+        }
+
 
     }
 
