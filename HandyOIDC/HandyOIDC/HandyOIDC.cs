@@ -28,7 +28,8 @@ namespace HandyOIDC
         }
 
         /// <summary>
-        /// Will handle user login from start to end based on settings
+        /// Do not use call ! It is called by the HandyOidcAuthorizeAttribute
+        /// Handle user login from start to end based on settings
         /// </summary>
         /// <param name="context"></param>
         public static void HandleLogin(HttpContext context)
@@ -38,8 +39,21 @@ namespace HandyOIDC
             TryUserTokenAuthentication(context);
 
 
+            //if user is directed to login page
+            if (!string.IsNullOrEmpty(Settings.ClientAuthenticationParameters.LoginUrl) && context.Request.Url.ToString().Contains(Settings.ClientAuthenticationParameters.LoginUrl))
+                return; //continue
+
+
+            //if user is logging out
+            if (!string.IsNullOrEmpty(Settings.ClientAuthenticationParameters.LogoutUrl) && context.Request.Url.ToString().Contains(Settings.ClientAuthenticationParameters.LogoutUrl))
+            {
+                Logout(context);
+                return;
+            }
+
+
             //If user is connected, continue
-            if (context.User.Identity.IsAuthenticated)
+            if (context.User != null && context.User.Identity.IsAuthenticated)
                 return;
 
 
@@ -67,11 +81,17 @@ namespace HandyOIDC
 
             //if login page is not defined
             if (Settings.ClientAuthenticationParameters.LoginUrl == null)
-                context.ApplicationInstance.Response.Redirect(BuildAuthorizationRequest(state)); //We redirect to OIDC provider
+                Login(context);
             else
                 context.ApplicationInstance.Response.Redirect(Settings.ClientAuthenticationParameters.LoginUrl); //We redirect to login page
 
         }
+
+        public static void Login(HttpContext context)
+        {
+            context.ApplicationInstance.Response.Redirect(BuildAuthorizationRequest(context.Session[STATE_SESSION_KEY].ToString())); //We redirect to OIDC provider
+        }
+
 
         /// <summary>
         /// Returns all signing keys from jkws.json file Url
@@ -110,17 +130,9 @@ namespace HandyOIDC
             return keys;
         }
 
-        /// <summary>
-        /// Is the current HttpContext.Request a valid callback from OIDC provider ?
-        /// </summary>
-        /// <param name="context">Current HttpContext</param>
-        /// <returns></returns>
-        private static bool IsValidCallback(HttpContext context)
-        {
-            return (context.Request.Url.ToString().Contains(Settings.ClientAuthenticationParameters.CallbackUrl)
-                && context.Request.QueryString["code"] != null && context.Request.QueryString["state"] != null //Request must have a code and state
-                && context.Session[STATE_SESSION_KEY] != null && context.Session[STATE_SESSION_KEY].ToString() == context.Request.QueryString["state"]);//State must match send state
-        }
+
+        /* Private members */
+
 
         /// <summary>
         /// Try to get the token from callback request and storing it in session
@@ -165,6 +177,20 @@ namespace HandyOIDC
                 }
 
             }
+        }
+
+        /// <summary>
+        /// Logout user
+        /// If login Url is defined, will redirect to login page
+        /// </summary>
+        /// <param name="context">Current HttpContext</param>
+        private static void Logout(HttpContext context)
+        {
+            context.Session.Clear();
+            context.User = null;
+
+            if (Settings.ClientAuthenticationParameters.LoginUrl != null)
+                context.ApplicationInstance.Response.Redirect(Settings.ClientAuthenticationParameters.LoginUrl + "?logout=true");
         }
 
         /// <summary>
@@ -240,6 +266,21 @@ namespace HandyOIDC
         }
 
 
+        /* Utils */
+
+
+        /// <summary>
+        /// Is the current HttpContext.Request a valid callback from OIDC provider ?
+        /// </summary>
+        /// <param name="context">Current HttpContext</param>
+        /// <returns></returns>
+        private static bool IsValidCallback(HttpContext context)
+        {
+            return (context.Request.Url.ToString().Contains(Settings.ClientAuthenticationParameters.CallbackUrl)
+                && context.Request.QueryString["code"] != null && context.Request.QueryString["state"] != null //Request must have a code and state
+                && context.Session[STATE_SESSION_KEY] != null && context.Session[STATE_SESSION_KEY].ToString() == context.Request.QueryString["state"]);//State must match send state
+        }
+
         private static string ToQueryString(IEnumerable<KeyValuePair<string, string>> values)
         {
             var content = values.Select(v => $"{HttpUtility.UrlEncode(v.Key)}={HttpUtility.UrlEncode(v.Value)}");
@@ -269,6 +310,10 @@ namespace HandyOIDC
 
             if (token == null)
                 return;
+
+            //If token has expired
+            if (token.ValidTo < DateTime.Now)
+                Logout(context);
 
             var handler = new JwtSecurityTokenHandler();
 

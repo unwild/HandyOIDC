@@ -1,6 +1,4 @@
 ﻿using HandyOIDC;
-using Microsoft.IdentityModel.Tokens;
-using System;
 using System.Web;
 using System.Web.Mvc;
 using System.Web.Optimization;
@@ -17,13 +15,17 @@ namespace WebApplication
             RouteConfig.RegisterRoutes(RouteTable.Routes);
             BundleConfig.RegisterBundles(BundleTable.Bundles);
 
+            GlobalFilters.Filters.Add(new HandyOidcAuthorizeAttribute());
+
             HandyOidc.Init(new HandyOidcSettings()
             {
 
                 ClientAuthenticationParameters = new HandyOidcClientAuthenticationParameters()
                 {
-                    CallbackUrl = "http://localhost:63835/callback",
-                    AuthFailUrl = "http://localhost:63835/Home/Fail",
+                    CallbackUrl = "http://localhost:63835/Oidc/callback",
+                    AuthFailUrl = "http://localhost:63835/Oidc/Fail",
+                    LoginUrl = "http://localhost:63835/Oidc/Login", //Login page is an option, if not defined, automatically redirect user if needed.
+                    LogoutUrl = "http://localhost:63835/Oidc/Logout"
                 },
                 ProviderConfiguration = new HandyOidcProviderConfiguration()
                 {
@@ -43,14 +45,6 @@ namespace WebApplication
                 }
 
             });
-
-        }
-
-
-        protected void Application_AcquireRequestState(Object sender, EventArgs e)
-        {
-
-            HandyOidc.HandleLogin(HttpContext.Current);
 
         }
 

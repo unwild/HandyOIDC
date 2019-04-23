@@ -41,7 +41,7 @@ namespace HandyOIDC
         /// Logout Url
         /// This page must allow anonymous. If LoginUrl is defined, the user will be redirected to Login url
         /// </summary>
-        public string LogoutUrl { get; set; }
+        public string LogoutUrl { get; set; } = null;
     }
 
     public class HandyOidcProviderConfiguration
