@@ -34,7 +34,6 @@ namespace HandyOIDC
         /// <param name="context"></param>
         public static void HandleLogin(HttpContext context)
         {
-
             //If there is a token in session, we try to validate it
             TryUserTokenAuthentication(context);
 
@@ -275,7 +274,7 @@ namespace HandyOIDC
         /// <returns></returns>
         private static bool IsValidCallback(HttpContext context)
         {
-            return (context.Request.Url.ToString().Contains(Settings.ClientAuthenticationParameters.CallbackUrl)
+            return (string.Equals(GetCleanRoute(context), Settings.ClientAuthenticationParameters.CallbackUrl, StringComparison.OrdinalIgnoreCase) //Url matches
                 && context.Request.QueryString["code"] != null && context.Request.QueryString["state"] != null //Request must have a code and state
                 && context.Session[STATE_SESSION_KEY] != null && context.Session[STATE_SESSION_KEY].ToString() == context.Request.QueryString["state"]);//State must match send state
         }

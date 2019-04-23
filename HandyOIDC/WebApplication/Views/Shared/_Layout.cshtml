@@ -15,7 +15,7 @@
     @if (Context.User != null && Context.User.Identity.IsAuthenticated)
     {
         <div style="float:right">
-            @Html.ActionLink("Logout", "Logout", "Oidc");
+            @Html.ActionLink("Logout", "Logout", "Oidc")
         </div>
     }
     <hr />
