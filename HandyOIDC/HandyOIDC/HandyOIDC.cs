@@ -27,64 +27,35 @@ namespace HandyOIDC
             Settings = settings;
         }
 
+        /// <summary>
+        /// Will handle user login from start to end based on settings
+        /// </summary>
+        /// <param name="context"></param>
         public static void HandleLogin(HttpContext context)
         {
+
             //If there is a token in session, we try to validate it
             TryUserTokenAuthentication(context);
 
+
+            //If user is connected, continue
             if (context.User.Identity.IsAuthenticated)
                 return;
+
 
             //If user auth failed
             if (Settings.ClientAuthenticationParameters.AuthFailUrl != null && context.Request.Url.ToString().Contains(Settings.ClientAuthenticationParameters.AuthFailUrl))
                 return;
 
+
             //If request is callback from Oidc provider login page
-            if (context.Request.Url.ToString().Contains(Settings.ClientAuthenticationParameters.CallbackUrl)
-                && context.Request.QueryString["code"] != null && context.Request.QueryString["state"] != null //Request must have a code and state
-                && context.Session[STATE_SESSION_KEY] != null && context.Session[STATE_SESSION_KEY].ToString() == context.Request.QueryString["state"])//State must match send state
+            if (IsValidCallback(context))
             {
                 string code = context.Request.QueryString["code"].ToString();
 
-                //Requesting token
-                HttpResponseMessage response = TryGetToken(code, context);
-
-                if (response.IsSuccessStatusCode)
-                {
-                    string jsonString = response.Content.ReadAsStringAsync().Result;
-
-                    TokenEndPointResponseModel responseModel = JsonConvert.DeserializeObject<TokenEndPointResponseModel>(jsonString);
-
-                    var handler = new JwtSecurityTokenHandler();
-
-                    var securityToken = handler.ReadJwtToken(responseModel.id_token);
-
-                    //Store securityToken in session
-                    context.Session[JWT_SESSION_KEY] = securityToken;
-
-                    //redirect to original destination
-                    context.ApplicationInstance.Response.Redirect(context.Session[FINALCALLBACK_SESSION_KEY].ToString());
-                    return;
-                }
-                else
-                {
-                    if (Settings.ClientAuthenticationParameters.AuthFailUrl != null)
-                    {
-                        context.ApplicationInstance.Response.Redirect(Settings.ClientAuthenticationParameters.AuthFailUrl);
-                    }
-                    else
-                    {
-                        context.ApplicationInstance.Response.Clear();
-                        context.ApplicationInstance.Response.Write("Access Denied");
-                        context.ApplicationInstance.Response.StatusCode = 401;
-                        context.ApplicationInstance.Response.End();
-                        return;
-                    }
-
-                }
+                HandleCallback(context, code);
 
                 return;
-
             }
 
 
@@ -94,10 +65,19 @@ namespace HandyOIDC
             context.Session[STATE_SESSION_KEY] = state;
             context.Session[FINALCALLBACK_SESSION_KEY] = context.Request.Url;
 
-            //We redirect to OIDC
-            context.ApplicationInstance.Response.Redirect(BuildAuthorizationRequest(state));
+            //if login page is not defined
+            if (Settings.ClientAuthenticationParameters.LoginUrl == null)
+                context.ApplicationInstance.Response.Redirect(BuildAuthorizationRequest(state)); //We redirect to OIDC provider
+            else
+                context.ApplicationInstance.Response.Redirect(Settings.ClientAuthenticationParameters.LoginUrl); //We redirect to login page
+
         }
 
+        /// <summary>
+        /// Returns all signing keys from jkws.json file Url
+        /// </summary>
+        /// <param name="url">jwks.json file Url</param>
+        /// <returns></returns>
         public static IList<SecurityKey> GetSigningKeysFromUrl(string url)
         {
             using (var cli = new WebClient())
@@ -110,6 +90,11 @@ namespace HandyOIDC
             }
         }
 
+        /// <summary>
+        /// Return all signing keys from jwks.json file content
+        /// </summary>
+        /// <param name="jsonString">full json string from jwks.json</param>
+        /// <returns></returns>
         public static IList<SecurityKey> GetSigningKeysFromJson(string jsonString)
         {
             IList<SecurityKey> keys = new List<SecurityKey>();
@@ -125,7 +110,69 @@ namespace HandyOIDC
             return keys;
         }
 
+        /// <summary>
+        /// Is the current HttpContext.Request a valid callback from OIDC provider ?
+        /// </summary>
+        /// <param name="context">Current HttpContext</param>
+        /// <returns></returns>
+        private static bool IsValidCallback(HttpContext context)
+        {
+            return (context.Request.Url.ToString().Contains(Settings.ClientAuthenticationParameters.CallbackUrl)
+                && context.Request.QueryString["code"] != null && context.Request.QueryString["state"] != null //Request must have a code and state
+                && context.Session[STATE_SESSION_KEY] != null && context.Session[STATE_SESSION_KEY].ToString() == context.Request.QueryString["state"]);//State must match send state
+        }
 
+        /// <summary>
+        /// Try to get the token from callback request and storing it in session
+        /// If token is valid, the user will be redirected to his original requested url
+        /// </summary>
+        /// <param name="context">Current HttpContext</param>
+        /// <param name="code">Callback code</param>
+        private static void HandleCallback(HttpContext context, string code)
+        {
+
+            //Requesting token
+            HttpResponseMessage response = TryGetToken(code, context);
+
+            if (response.IsSuccessStatusCode)
+            {
+                string jsonString = response.Content.ReadAsStringAsync().Result;
+
+                TokenEndPointResponseModel responseModel = JsonConvert.DeserializeObject<TokenEndPointResponseModel>(jsonString);
+
+                var handler = new JwtSecurityTokenHandler();
+
+                var securityToken = handler.ReadJwtToken(responseModel.id_token);
+
+                //Store securityToken in session
+                context.Session[JWT_SESSION_KEY] = securityToken;
+
+                //redirect to original destination
+                context.ApplicationInstance.Response.Redirect(context.Session[FINALCALLBACK_SESSION_KEY].ToString());
+            }
+            else
+            {
+                if (Settings.ClientAuthenticationParameters.AuthFailUrl != null)
+                {
+                    context.ApplicationInstance.Response.Redirect(Settings.ClientAuthenticationParameters.AuthFailUrl);
+                }
+                else
+                {
+                    context.ApplicationInstance.Response.Clear();
+                    context.ApplicationInstance.Response.Write("Access Denied");
+                    context.ApplicationInstance.Response.StatusCode = 401;
+                    context.ApplicationInstance.Response.End();
+                }
+
+            }
+        }
+
+        /// <summary>
+        /// Token request 
+        /// </summary>
+        /// <param name="code"></param>
+        /// <param name="context"></param>
+        /// <returns></returns>
         private static HttpResponseMessage TryGetToken(string code, HttpContext context)
         {
             context.ApplicationInstance.Response.Clear();
@@ -141,11 +188,21 @@ namespace HandyOIDC
 
         }
 
+        /// <summary>
+        /// Return authorisation request Url string with parameters
+        /// </summary>
+        /// <param name="state">generated state for the current user</param>
+        /// <returns></returns>
         private static string BuildAuthorizationRequest(string state)
         {
             return Settings.ProviderConfiguration.AuthorizationEndpointUrl + ToQueryString(GetAuthorizationRequestContent(state));
         }
 
+        /// <summary>
+        /// Build token request Url string with parameters
+        /// </summary>
+        /// <param name="code">callback code from current user</param>
+        /// <returns></returns>
         private static string BuildTokenRequest(string code)
         {
             return Settings.ProviderConfiguration.TokenEndpointUrl + ToQueryString(GetTokenRequestContent(code));
@@ -230,7 +287,6 @@ namespace HandyOIDC
             return scope + string.Join(" ", Settings.ProviderConfiguration.Scope);
 
         }
-
 
     }
 
