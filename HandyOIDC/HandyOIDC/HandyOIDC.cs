@@ -87,6 +87,10 @@ namespace HandyOIDC
 
         public static void Login(HttpContext context)
         {
+            //If user is already connected, continue
+            if (context.User != null && context.User.Identity.IsAuthenticated)
+                return;
+
             context.ApplicationInstance.Response.Redirect(BuildAuthorizationRequest(context.Session[STATE_SESSION_KEY].ToString())); //We redirect to OIDC provider
         }
 

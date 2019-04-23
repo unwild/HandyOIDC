@@ -21,7 +21,7 @@ namespace WebApplication.Controllers
 
         public ActionResult Callback()
         {
-            return View();
+            return RedirectToAction("Index", "Home");
         }
 
         [AllowAnonymous]
